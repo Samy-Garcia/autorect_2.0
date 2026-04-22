@@ -4,6 +4,8 @@ import AdminLayout from "./components/AdminLayout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import OtpVerification from "./pages/OtpVerification";
+import PasswordRecoveryRequest from "./pages/PasswordRecoveryRequest";
+import PasswordRecoveryOtp from "./pages/PasswordRecoveryOtp";
 import Products from "./pages/Products";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
@@ -14,6 +16,9 @@ const appRoutes = [
   { path: "/", element: <Login /> },
   { path: "/register", element: <Register /> },
   { path: "/register/otp", element: <OtpVerification /> },
+  // flujo de recuperación de contraseña (solicitud de correo + validación OTP)
+  { path: "/recover-password", element: <PasswordRecoveryRequest /> },
+  { path: "/recover-password/otp", element: <PasswordRecoveryOtp /> },
   {
     element: <AdminLayout />,
     children: [

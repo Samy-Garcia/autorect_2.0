@@ -7,16 +7,17 @@ import logoutRoutes from "./src/routes/logout.js";
 import userRoutes from "./src/routes/users.js";
 import registerUsersRoutes from "./src/routes/registerUsers.js";
 import refreshRoutes from "./src/routes/refresh.js";
+import passwordRecoveryRoutes from "./src/routes/passwordRecovery.js";
 
 
 const app = express();
 
-const allowedOrigins = [
+const allowedOrigins = [ // Seagregan orígenes permitidos para CORS, incluyendo la URL del frontend desde variables de entorno o un valor por defecto
 	process.env.FRONTEND_URL,
 	"http://localhost:5173",
 ].filter(Boolean);
 
-app.use(
+app.use( // Configuración de CORS para permitir solicitudes desde el frontend y manejar credenciales
 	cors({
 		origin: (origin, callback) => {
 			if (!origin || allowedOrigins.includes(origin)) {
@@ -32,10 +33,10 @@ app.use(
 	}),
 );
 
-app.use(cookieParser());
+app.use(cookieParser()); // Middleware para parsear cookies en las solicitudes entrantes
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json()); // Middleware para parsear el cuerpo de las solicitudes
+app.use(express.urlencoded({ extended: true })); // Middleware para parsear datos codificados en URL, útil para formularios tradicionales
 
 //Rutas
 app.use("/api/login", loginRoutes);
@@ -44,5 +45,6 @@ app.use("/api/refresh", refreshRoutes);
 app.use("/api/products", productsRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/register", registerUsersRoutes);
+app.use("/api/password-recovery", passwordRecoveryRoutes);
 
 export default app;

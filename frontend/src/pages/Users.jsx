@@ -12,11 +12,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
+import PasswordCriteria from "@/components/ui/password-criteria";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import useUserData from "@/components/users/hooks/useUserData";
+import { isStrongPassword } from "@/lib/password-policy";
+import { useAuth } from "@/hooks/useAuth";
 
 const emptyUserForm = {
   name: "",
@@ -42,11 +45,6 @@ const validateEmail = (email) => {
   return regex.test(email);
 };
 
-const validatePassword = (password) => {
-  const regex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
-  return regex.test(password);
-};
-
 const validateUserForm = (form, isEdit = false) => {
   const errors = {};
   
@@ -66,7 +64,7 @@ const validateUserForm = (form, isEdit = false) => {
   }
   if (!isEdit && !form.password) {
     errors.password = "La contraseña es requerida";
-  } else if (!isEdit && form.password && !validatePassword(form.password)) {
+  } else if (!isEdit && form.password && !isStrongPassword(form.password)) {
     errors.password = "Mínimo 8 caracteres con mayúscula, minúscula, número y símbolo";
   }
   if (!form.userType) {
@@ -122,6 +120,7 @@ const getNextBirthdayDistance = (birthDateValue) => {
 };
 
 function Users() {
+  const { user: authUser } = useAuth();
   const {
     users,
     loading,
@@ -145,10 +144,16 @@ function Users() {
   const [sortBy, setSortBy] = useState("name-asc");
 
   const rowsPerPage = 10;
+  // ocultamos al usuario autenticado para evitar que se edite/elimine desde este módulo
+  const visibleUsers = useMemo(
+    () => users.filter((candidate) => candidate.id !== authUser?.id),
+    [users, authUser?.id],
+  );
+
   const filteredUsers = useMemo(() => {
     const term = searchText.trim().toLowerCase();
 
-    const matches = users.filter((user) => {
+    const matches = visibleUsers.filter((user) => {
       const fullName = `${user.name} ${user.lastName}`.toLowerCase();
       const bySearch =
         !term ||
@@ -185,7 +190,7 @@ function Users() {
           return `${firstUser.name} ${firstUser.lastName}`.localeCompare(`${secondUser.name} ${secondUser.lastName}`, "es", { sensitivity: "base" });
       }
     });
-  }, [dateFilter, users, searchText, sortBy, verificationFilter]);
+  }, [dateFilter, visibleUsers, searchText, sortBy, verificationFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / rowsPerPage));
   const paginatedUsers = useMemo(() => {
@@ -193,8 +198,8 @@ function Users() {
     return filteredUsers.slice(start, start + rowsPerPage);
   }, [currentPage, filteredUsers]);
 
-  const verifiedCount = users.filter((user) => user.isVerified === true).length;
-  const pendingCount = users.filter((user) => user.isVerified === false).length;
+  const verifiedCount = visibleUsers.filter((user) => user.isVerified === true).length;
+  const pendingCount = visibleUsers.filter((user) => user.isVerified === false).length;
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
@@ -339,7 +344,7 @@ function Users() {
 
         <div className="flex flex-wrap items-center gap-4 border-b border-white/10 pb-2">
           {[
-            { key: "all", label: "Todos los usuarios", count: users.length },
+            { key: "all", label: "Todos los usuarios", count: visibleUsers.length },
             { key: "verified", label: "Verificados", count: verifiedCount },
             { key: "pending", label: "Pendientes", count: pendingCount },
           ].map((item) => {
@@ -671,6 +676,7 @@ function Users() {
                   placeholder="Mínimo 8 caracteres"
                   aria-invalid={!!createErrors.password}
                 />
+                <PasswordCriteria password={createForm.password} className="mt-2" />
                 {createErrors.password && <p className="text-xs text-red-500">{createErrors.password}</p>}
               </div>
             </div>

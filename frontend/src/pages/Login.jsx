@@ -80,6 +80,15 @@ function Login() {
 
 
 
+                <div className="flex justify-end">
+                  <Link
+                    to="/recover-password"
+                    className={`${buttonVariants({ variant: "link", size: "sm" })} h-auto p-0 text-white/75 hover:text-[#822727]`}
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                </div>
+
                 <Button
                   type="submit"
                   variant="outline"

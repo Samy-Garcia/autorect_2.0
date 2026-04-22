@@ -7,6 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import PasswordCriteria from "@/components/ui/password-criteria";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 function Register() {
@@ -152,6 +153,7 @@ function Register() {
                                 <div className="space-y-2">
                                     <Label htmlFor="register-password" className={labelClass}>Contraseña</Label>
                                     <Input id="register-password" type="password" placeholder="••••••••" className={inputClass} value={password} onChange={(event) => setPassword(event.target.value)} />
+                                    <PasswordCriteria password={password} />
                                 </div>
 
                                 <Button

@@ -1,17 +1,72 @@
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
-const ONLY_LETTERS_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/;
+const ONLY_LETTERS_REGEX = /^[\p{L}\s'’-]+$/u;
 const ONLY_NUMBERS_REGEX = /^\d+$/;
 const ONLY_ALPHANUMERIC_REGEX = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ]+$/;
 const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 const PHONE_REGEX = /^\+?[\d\s\-().]{7,20}$/;
 const URL_REGEX = /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)$/;
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const OTP_REGEX = /^[a-f0-9]{6}$/i;
 const USER_TYPES = ["admin", "supervisor", "vendedor", "usuario"];
+
+// construye el detalle de requisitos de una contraseña para poder reutilizarlo en las validaciones o en la interfaz
+export const getPasswordCriteria = (value = "") => {
+	const password = typeof value === "string" ? value : "";
+
+	return [
+		{
+			key: "length",
+			label: "Mínimo 8 caracteres",
+			valid: password.length >= 8,
+		},
+		{
+			key: "uppercase",
+			label: "Al menos una mayúscula",
+			valid: /[A-Z]/.test(password),
+		},
+		{
+			key: "lowercase",
+			label: "Al menos una minúscula",
+			valid: /[a-z]/.test(password),
+		},
+		{
+			key: "number",
+			label: "Al menos un número",
+			valid: /\d/.test(password),
+		},
+		{
+			key: "symbol",
+			label: "Al menos un carácter especial",
+			valid: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
+		},
+	];
+};
+
+// centraliza los mensajes de error de contraseña para reutilizarlos en registro, recuperación y otros flujos
+export const getPasswordValidationErrors = (value = "", fieldName = "password") => {
+	const password = typeof value === "string" ? value : "";
+	const errors = [];
+
+	if (!password) {
+		errors.push(`${fieldName} es obligatorio`);
+		return errors;
+	}
+
+	if (!hasMinLength(password, 8)) {
+		errors.push(`${fieldName} debe tener al menos 8 caracteres`);
+	}
+
+	if (!isStrongPassword(password)) {
+		errors.push(`${fieldName} debe incluir mayúscula, minúscula, número y carácter especial`);
+	}
+
+	return errors;
+};
 
 const normalizeString = (value) => {
 	if (typeof value !== "string") return "";
-	return value.trim();
+	return value.trim().normalize("NFC");
 };
 
 /** Solo letras (incluye acentos, ñ y espacios) */
@@ -114,10 +169,8 @@ export const validateRegisterPayload = (payload = {}) => {
 
 	if (!password) {
 		errors.push("password es obligatorio");
-	} else if (!hasMinLength(password, 8)) {
-		errors.push("password debe tener al menos 8 caracteres");
-	} else if (!isStrongPassword(password)) {
-		errors.push("password debe incluir mayúscula, minúscula, número y carácter especial");
+	} else {
+		errors.push(...getPasswordValidationErrors(password, "password"));
 	}
 
 	if (birthDate === undefined || birthDate === null || birthDate === "") {
@@ -143,7 +196,49 @@ export const validateRegisterPayload = (payload = {}) => {
 			password,
 			birthDate,
 			userType,
-			isVerified: Boolean(payload.isVerified),
+			isVerified: false,
+		},
+	};
+};
+
+export const validatePasswordRecoveryRequestPayload = (payload = {}) => {
+	const errors = [];
+	const email = normalizeString(payload.email).toLowerCase();
+
+	if (!email || !isValidEmail(email)) {
+		errors.push("email inválido");
+	}
+
+	return {
+		valid: errors.length === 0,
+		errors,
+		data: { email },
+	};
+};
+
+export const validatePasswordRecoveryConfirmPayload = (payload = {}) => {
+	const errors = [];
+	const verificationCodeRequest = normalizeString(payload.verificationCodeRequest);
+	const newPassword = typeof payload.newPassword === "string" ? payload.newPassword : "";
+
+	if (!verificationCodeRequest) {
+		errors.push("verificationCodeRequest es obligatorio");
+	} else if (!OTP_REGEX.test(verificationCodeRequest)) {
+		errors.push("verificationCodeRequest debe ser un código hexadecimal de 6 caracteres");
+	}
+
+	if (!newPassword) {
+		errors.push("newPassword es obligatorio");
+	} else {
+		errors.push(...getPasswordValidationErrors(newPassword, "newPassword"));
+	}
+
+	return {
+		valid: errors.length === 0,
+		errors,
+		data: {
+			verificationCodeRequest,
+			newPassword,
 		},
 	};
 };

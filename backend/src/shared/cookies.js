@@ -3,6 +3,7 @@ export const COOKIE_NAMES = {
   ACCESS:       "authCookie",
   REFRESH:      "refreshCookie",
   REGISTRATION: "resgistrationCookie",
+  PASSWORD_RECOVERY: "passwordRecoveryCookie",
 };
 
 //Opciones base
@@ -53,4 +54,19 @@ export const setRegistrationCookie = (res, token) => {
 //Limpia la cookie de registro.
 export const clearRegistrationCookie = (res) => {
   res.clearCookie(COOKIE_NAMES.REGISTRATION, BASE_OPTIONS);
+};
+
+//Cookie de recuperación de contraseña
+
+/** Setea la cookie temporal para recuperación de contraseña (5 min). */
+export const setPasswordRecoveryCookie = (res, token) => {
+  res.cookie(COOKIE_NAMES.PASSWORD_RECOVERY, token, {
+    ...BASE_OPTIONS,
+    maxAge: MS.FIVE_MIN,
+  });
+};
+
+//Limpia la cookie de recuperación de contraseña.
+export const clearPasswordRecoveryCookie = (res) => {
+  res.clearCookie(COOKIE_NAMES.PASSWORD_RECOVERY, BASE_OPTIONS);
 };

@@ -13,6 +13,7 @@ const userSchema = new Schema( // definimos el esquema de usuarios con los campo
       default: "usuario",
     },
     isVerified: { type: Boolean, default: false }, // indica si el usuario ha verificado su cuenta, es un booleano opcional
+    currentSessionId: { type: String, default: null }, // identificador de la única sesión activa permitida para el usuario
     loginAttemps: { type: Number, default: 0, max: 5 }, // el número de intentos de inicio de sesión fallidos, es un número opcional con un valor máximo de 5
     timeOut: { type: Date }, // la fecha y hora del último intento de inicio de sesión fallido es un Date opcional
   },

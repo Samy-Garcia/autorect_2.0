@@ -1,8 +1,9 @@
 import crypto from "crypto";
 import bcryptjs from "bcryptjs";
 import userModel from "../models/users.js";
-import sendEmail from "./emailService.js";
+import { sendVerificationEmail } from "./emailService.js";
 import { signVerificationToken, verifyToken } from "../shared/jwt.js";
+import { getPasswordValidationErrors } from "../shared/validator.js";
 import { config } from "../../config.js";
 
 /**
@@ -13,27 +14,47 @@ import { config } from "../../config.js";
  *          | { ok: false, status: 'already_exists'|'email_config_missing', message: string }}
  */
 export const initiateRegistration = async ({ name, lastName, birthDate, email, password, userType }) => {
-  const existing = await userModel.findOne({ email });
+  const existing = await userModel.findOne({ email }); // verificamos si ya existe un usuario con el mismo correo
   if (existing) {
     return { ok: false, status: "already_exists", message: "El usuario ya existe" };
   }
 
-  if (!config.email.senderEmail || !config.email.senderPassword) {
+  const passwordErrors = getPasswordValidationErrors(password, "password"); // validamos la fortaleza de la contraseña en la capa de servicio
+  if (passwordErrors.length > 0) {
+    return { ok: false, status: "weak_password", message: passwordErrors[0] };
+  }
+
+  if (!config.email.senderEmail || !config.email.senderPassword) { // validamos que exista configuración de correo antes de continuar
     return { ok: false, status: "email_config_missing", message: "Configuración de correo incompleta" };
   }
 
-  const passwordHashed = await bcryptjs.hash(password, 10);
-  const verificationCode = crypto.randomBytes(3).toString("hex");
+  const passwordHashed = await bcryptjs.hash(password, 10); // hasheamos la contraseña para no guardarla en texto plano
+  const verificationCode = crypto.randomBytes(3).toString("hex"); // generamos código OTP de verificación
 
-  const token = signVerificationToken(
-    { verificationCode, name, lastName, birthDate, email, password: passwordHashed, userType },
+  const token = signVerificationToken( // firmamos token temporal con los datos del registro
+    {
+      verificationCode,
+      name,
+      lastName,
+      birthDate,
+      email,
+      password: passwordHashed,
+      userType,
+      isVerified: false,
+    },
   );
 
   const otpRoute = "/register/otp";
   const frontendBase = (config.app.frontendUrl || "http://localhost:5173").replace(/\/+$/, "");
   const otpUrl = `${frontendBase}${otpRoute}`;
 
-  await sendEmail(config.email.senderEmail, config.email.senderPassword, email, verificationCode, otpUrl);
+  await sendVerificationEmail( // enviamos el correo con el código y enlace al paso OTP
+    config.email.senderEmail,
+    config.email.senderPassword,
+    email,
+    verificationCode,
+    otpUrl,
+  );
 
   return { ok: true, token };
 };
@@ -45,11 +66,11 @@ export const initiateRegistration = async ({ name, lastName, birthDate, email, p
  *          | { ok: false, status: 'missing_cookie'|'invalid_token'|'incomplete_token'|'wrong_code', message: string }}
  */
 export const confirmRegistration = async (verificationCodeRequest, registrationToken) => {
-  if (!registrationToken) {
+  if (!registrationToken) { // si no hay cookie/token de registro, no se puede completar la verificación
     return { ok: false, status: "missing_cookie", message: "Cookie de registro no encontrada o expirada" };
   }
 
-  const verification = verifyToken(registrationToken, "access");
+  const verification = verifyToken(registrationToken, "access"); // validamos el token temporal de registro
   if (!verification.ok) {
     return { ok: false, status: "invalid_token", message: "El enlace de verificación ha expirado" };
   }
@@ -73,20 +94,20 @@ export const confirmRegistration = async (verificationCodeRequest, registrationT
     };
   }
 
-  if (verificationCodeRequest !== storedCode) {
+  if (verificationCodeRequest !== storedCode) { // comparamos el OTP ingresado contra el OTP firmado en el token
     return { ok: false, status: "wrong_code", message: "Código de verificación inválido" };
   }
 
-  const newUser = new userModel({
+  const newUser = new userModel({ // creamos el usuario definitivo una vez validado el código OTP
     name,
     lastName,
     birthDate,
     email,
     password,
     userType: userType || "usuario",
-    isVerified: false,
+    isVerified: true,
   });
-  await newUser.save();
+  await newUser.save(); // persistimos el nuevo usuario verificado
 
   return { ok: true, user: newUser };
 };
