@@ -24,3 +24,5 @@ const userSchema = new Schema( // definimos el esquema de usuarios con los campo
 );
 
 export default model("Users", userSchema); // exportamos el modelo de usuarios para usarlo en los controladores y rutas
+
+// Este modelo de usuarios se puede usar para crear, leer, actualizar y eliminar usuarios en la base de datos MongoDB. Además, se pueden agregar métodos personalizados al esquema para manejar la lógica de negocio relacionada con los usuarios, como la verificación de contraseñas, el bloqueo de cuentas después de varios intentos fallidos, etc.
