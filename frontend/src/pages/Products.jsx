@@ -15,7 +15,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import useProductData from "@/components/users/hooks/useProductData";
+import useProductData from "@/components/products/hooks/useProductData";
 
 
 
